@@ -51,6 +51,55 @@ namespace AJE
         [KSPField(isPersistant = false, guiActive = true)]
         public String Environment;
 
+        // Variable bypass stuff
+        [KSPField(isPersistant = false, guiActive = false)]
+        public bool useVariableBypass = false;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public int defaultBypassSetting = 100;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public int designBypassSetting = 100;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public float bypassResponseRate = 20.0f;
+        [KSPField(isPersistant = false, guiActive = true)]
+        public String Bypass;
+
+        [KSPField(isPersistant = true, guiActive = false, guiName = "Bypass Setting", guiUnits="%")]
+        public int commandedBypassSetting = -100;
+        [KSPField(isPersistant = true, guiActive = true)]
+        public float actualBypassSetting = 100.0f;
+
+        // Will become a global setting at some point, when global settings are implemented
+        int bypassIncrement = 20;
+
+        [KSPEvent(name = "IncreaseBypass", guiActive = false, guiName = "Increase Bypass")]
+        public void IncreaseBypass()
+        {
+            if (commandedBypassSetting < 100)
+            {
+                commandedBypassSetting += bypassIncrement;
+            }
+            commandedBypassSetting = Mathf.Min(commandedBypassSetting, 100);
+        }
+        [KSPAction("Increase Bypass")]
+        public void IncreaseBypassAction(KSPActionParam param)
+        {
+            IncreaseBypass();
+        }
+        [KSPEvent(name = "DecreaseBypass", guiActive = false, guiName = "Decrease Bypass")]
+        public void DecreaseBypass()
+        {
+            if (commandedBypassSetting > 0)
+            {
+                commandedBypassSetting -= bypassIncrement;
+            }
+            commandedBypassSetting = Mathf.Max(commandedBypassSetting, 0);
+        }
+        [KSPAction("Decrease Bypass")]
+        public void DecreaseBypassAction(KSPActionParam param)
+        {
+            DecreaseBypass();
+        }
+        
         public AJESolver aje;
         public EngineWrapper engine;
         float acturalThrottle = 0;
@@ -71,11 +120,39 @@ namespace AJE
             if (TIT > part.maxTemp)
                 part.maxTemp = TIT;
             engine.heatProduction = part.maxTemp * 0.1f;
+
+            float initialArea = Area;
+            float initialBPR = BPR;
+            if (useVariableBypass)
+            {
+                Fields["commandedBypassSetting"].guiActive = true;
+                Fields["commandedBypassSetting"].guiActiveEditor = true;
+                Events["IncreaseBypass"].guiActive = true;
+                Events["IncreaseBypass"].guiActiveEditor = true;
+                Events["DecreaseBypass"].guiActive = true;
+                Events["DecreaseBypass"].guiActiveEditor = true;
+
+                if (commandedBypassSetting < 0)
+                    commandedBypassSetting = defaultBypassSetting;
+                actualBypassSetting = (float)commandedBypassSetting;
+
+                float bypassMultiplier = 1 + (BPR * (1 - (designBypassSetting / 100.0f)));
+                initialArea *= bypassMultiplier;
+                initialBPR *= designBypassSetting / 100.0f / bypassMultiplier;
+            }
+            else
+            {
+                Events["IncreaseBypass"].active = false;
+                Events["DecreaseBypass"].active = false;
+                Actions["IncreaseBypassAction"].active = false;
+                Actions["DecreaseBypassAction"].active = false;
+            }
+
             aje = new AJESolver();
             aje.InitializeOverallEngineData(
-                Area,
+                initialArea,
                 TPR,
-                BPR,
+                initialBPR,
                 CPR,
                 FPR,
                 Mdes,
@@ -127,6 +204,8 @@ namespace AJE
             }
 
             UpdateInletEffects();
+            if (useVariableBypass)
+                UpdateBypass();
             UpdateFlightCondition(vessel.altitude, part.vessel.srfSpeed, vessel.mainBody);
 
             if(CPR == 1 && aje.GetM0()<0.3)//ramjet
@@ -208,7 +287,21 @@ namespace AJE
             
         }
 
+        public void UpdateBypass()
+        {
+            float deltaT = (float)TimeWarp.fixedDeltaTime;
+            float d = commandedBypassSetting - actualBypassSetting;
+            if (Mathf.Abs(d) > bypassResponseRate * deltaT)
+                actualBypassSetting += Mathf.Sign(d) * bypassResponseRate * deltaT;
+            else
+                actualBypassSetting = (float)commandedBypassSetting;
 
+            float bypassMultiplier = (1 + (BPR * (1 - (actualBypassSetting/100.0f))));
+            float newArea = Area * bypassMultiplier;
+            float newBPR = BPR * actualBypassSetting / 100.0f / bypassMultiplier;
+            aje.SetAreaAndBypass(newArea, newBPR);
+            Bypass = "Core Area:" + newArea.ToString("N2") + " BPR:" + newBPR.ToString("N2");
+        }
     }
 }
 

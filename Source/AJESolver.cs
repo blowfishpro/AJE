@@ -276,6 +276,12 @@ namespace AJE
             Debug.Log(debugstring);*/
         }
 
+        public void SetAreaAndBypass(double Area, double bypassRatio)
+        {
+            Aref = Area;
+            BPR = bypassRatio;
+        }
+
         public void SetTPR(double t) { TPR = t; }
         public double GetThrust() { return thrust; }
         public double GetIsp() { return Isp; }
