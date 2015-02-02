@@ -60,12 +60,10 @@ namespace AJE
         public int designBypassSetting = 100;
         [KSPField(isPersistant = false, guiActive = false)]
         public float bypassResponseRate = 20.0f;
-        [KSPField(isPersistant = false, guiActive = true)]
-        public String Bypass;
 
         [KSPField(isPersistant = true, guiActive = false, guiName = "Bypass Setting", guiUnits="%")]
         public int commandedBypassSetting = -100;
-        [KSPField(isPersistant = true, guiActive = true)]
+        [KSPField(isPersistant = true, guiActive = false)]
         public float actualBypassSetting = 100.0f;
 
         // Will become a global setting at some point, when global settings are implemented
@@ -300,7 +298,6 @@ namespace AJE
             float newArea = Area * bypassMultiplier;
             float newBPR = BPR * actualBypassSetting / 100.0f / bypassMultiplier;
             aje.SetAreaAndBypass(newArea, newBPR);
-            Bypass = "Core Area:" + newArea.ToString("N2") + " BPR:" + newBPR.ToString("N2");
         }
     }
 }
