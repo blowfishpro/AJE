@@ -60,37 +60,84 @@ namespace AJE
         public int designBypassSetting = 100;
         [KSPField(isPersistant = false, guiActive = false)]
         public float bypassResponseRate = 20.0f;
+        [KSPField(isPersistant = false, guiActive = false)]
+        public FloatCurve defaultBypassCurve = new FloatCurve();
 
-        [KSPField(isPersistant = true, guiActive = false, guiName = "Bypass Setting", guiUnits="%")]
-        public int commandedBypassSetting = -100;
+        [KSPField(isPersistant = true, guiActive = true, guiActiveEditor = true, guiName = "Bypass Setting", guiFormat = "F0", guiUnits="%")]
+        public float commandedBypassSetting = -100.0f;
         [KSPField(isPersistant = true, guiActive = false)]
         public float actualBypassSetting = 100.0f;
+        [KSPField(isPersistant = true, guiActive = false)]
+        public bool usingBypassCurve = true;
 
         // Will become a global setting at some point, when global settings are implemented
-        int bypassIncrement = 20;
+        float bypassIncrement = 20.0f;
 
-        [KSPEvent(name = "IncreaseBypass", guiActive = false, guiName = "Increase Bypass")]
+        [KSPEvent(name = "SwitchBypassControlMode", guiActive = true, guiActiveEditor = true, guiName = "Bypass Control: Auto")]
+        public void SwitchBypassControlMode()
+        {
+            if (useVariableBypass && defaultBypassCurve != null)
+            {
+                if (usingBypassCurve)
+                {
+                    Events["SwitchBypassControlMode"].guiName = "Bypass Control: Manual";
+                    usingBypassCurve = false;
+                    commandedBypassSetting = defaultBypassSetting;
+                    Events["IncreaseBypass"].guiActive = true;
+                    Events["IncreaseBypass"].guiActiveEditor = true;
+                    Events["DecreaseBypass"].guiActive = true;
+                    Events["DecreaseBypass"].guiActiveEditor = true;
+                }
+                else
+                {
+                    Events["SwitchBypassControlMode"].guiName = "Bypass Control: Auto";
+                    usingBypassCurve = true;
+                    // This is mainly for the editor
+                    commandedBypassSetting = defaultBypassCurve.Evaluate((float)aje.GetM0());
+                    Events["IncreaseBypass"].guiActive = false;
+                    Events["IncreaseBypass"].guiActiveEditor = false;
+                    Events["DecreaseBypass"].guiActive = false;
+                    Events["DecreaseBypass"].guiActiveEditor = false;
+                }
+                // Refresh part action window - code from BDAnimationModules
+                foreach (UIPartActionWindow window in FindObjectsOfType(typeof(UIPartActionWindow)))
+                {
+                    if (window.part == part)
+                    {
+                        window.displayDirty = true;
+                    }
+                }
+            }
+        }
+        [KSPAction("Switch Bypass Control Mode")]
+        public void SwitchBypassControlModeAction(KSPActionParam param)
+        {
+            SwitchBypassControlMode();
+        }
+        [KSPEvent(name = "IncreaseBypass", guiActive = true, guiActiveEditor = true, guiName = "Increase Bypass")]
         public void IncreaseBypass()
         {
-            if (commandedBypassSetting < 100)
+            if (usingBypassCurve) return;
+            if (commandedBypassSetting < 100.0f)
             {
                 commandedBypassSetting += bypassIncrement;
             }
-            commandedBypassSetting = Mathf.Min(commandedBypassSetting, 100);
+            commandedBypassSetting = Mathf.Min(commandedBypassSetting, 100.0f);
         }
         [KSPAction("Increase Bypass")]
         public void IncreaseBypassAction(KSPActionParam param)
         {
             IncreaseBypass();
         }
-        [KSPEvent(name = "DecreaseBypass", guiActive = false, guiName = "Decrease Bypass")]
+        [KSPEvent(name = "DecreaseBypass", guiActive = true, guiActiveEditor = true, guiName = "Decrease Bypass")]
         public void DecreaseBypass()
         {
-            if (commandedBypassSetting > 0)
+            if (usingBypassCurve) return;
+            if (commandedBypassSetting > 0.0f)
             {
                 commandedBypassSetting -= bypassIncrement;
             }
-            commandedBypassSetting = Mathf.Max(commandedBypassSetting, 0);
+            commandedBypassSetting = Mathf.Max(commandedBypassSetting, 0.0f);
         }
         [KSPAction("Decrease Bypass")]
         public void DecreaseBypassAction(KSPActionParam param)
@@ -123,12 +170,27 @@ namespace AJE
             float initialBPR = BPR;
             if (useVariableBypass)
             {
-                Fields["commandedBypassSetting"].guiActive = true;
-                Fields["commandedBypassSetting"].guiActiveEditor = true;
-                Events["IncreaseBypass"].guiActive = true;
-                Events["IncreaseBypass"].guiActiveEditor = true;
-                Events["DecreaseBypass"].guiActive = true;
-                Events["DecreaseBypass"].guiActiveEditor = true;
+                float min, max;
+                defaultBypassCurve.FindMinMaxValue(out min, out max);
+                // if min == max then bypass curve is either absent or bogus
+                if (min == max)
+                {
+                    defaultBypassCurve = null;
+                    usingBypassCurve = false;
+                    Events["SwitchBypassControlMode"].active = false;
+                    Actions["SwitchBypassControlModeAction"].active = false;
+                }
+                else
+                {
+                    if (usingBypassCurve)
+                    {
+                        // Hide these to begin with if using bypass curve
+                        Events["IncreaseBypass"].guiActive = false;
+                        Events["IncreaseBypass"].guiActiveEditor = false;
+                        Events["DecreaseBypass"].guiActive = false;
+                        Events["DecreaseBypass"].guiActiveEditor = false;
+                    }
+                }
 
                 if (commandedBypassSetting < 0)
                     commandedBypassSetting = defaultBypassSetting;
@@ -140,10 +202,14 @@ namespace AJE
             }
             else
             {
+                Fields["commandedBypassSetting"].guiActive = false;
+                Fields["commandedBypassSetting"].guiActiveEditor = false;
                 Events["IncreaseBypass"].active = false;
                 Events["DecreaseBypass"].active = false;
+                Events["SwitchBypassControlMode"].active = false;
                 Actions["IncreaseBypassAction"].active = false;
                 Actions["DecreaseBypassAction"].active = false;
+                Actions["SwitchBypassControlModeAction"].active = false;
             }
 
             aje = new AJESolver();
@@ -203,7 +269,14 @@ namespace AJE
 
             UpdateInletEffects();
             if (useVariableBypass)
+            {
+                // usingBypassCurve _should_ be false if defaultBypassCurve is null, but just to be sure...
+                if (usingBypassCurve && defaultBypassCurve != null)
+                {
+                    commandedBypassSetting = defaultBypassCurve.Evaluate((float)aje.GetM0());
+                }
                 UpdateBypass();
+            }
             UpdateFlightCondition(vessel.altitude, part.vessel.srfSpeed, vessel.mainBody);
 
             if(CPR == 1 && aje.GetM0()<0.3)//ramjet
@@ -292,7 +365,7 @@ namespace AJE
             if (Mathf.Abs(d) > bypassResponseRate * deltaT)
                 actualBypassSetting += Mathf.Sign(d) * bypassResponseRate * deltaT;
             else
-                actualBypassSetting = (float)commandedBypassSetting;
+                actualBypassSetting = commandedBypassSetting;
 
             float bypassMultiplier = (1 + (BPR * (1 - (actualBypassSetting/100.0f))));
             float newArea = Area * bypassMultiplier;
