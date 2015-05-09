@@ -175,6 +175,14 @@ namespace AJE
 
             return output;
         }
+
+        public float TotalArea
+        {
+            get
+            {
+                return Area * (1f + BPR);
+            }
+        }
     }
 }
 
