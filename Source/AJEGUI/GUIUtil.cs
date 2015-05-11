@@ -81,7 +81,7 @@ namespace AJE.AJEGUI
         {
             GUILayout.BeginVertical();
             GUILayout.Box(units.UnitTypeName + " Units:", LeftLabel, normalWidth);
-            units = GUIUnits.UnitsAtIndex<T>(GUILayout.SelectionGrid(units.Index, GUIUnits.UnitNames<T>(), GUIUnits.UnitsCount<T>(), ButtonToggle, wideWidth));
+            units = GUIUnits.UnitsAtIndexGUI<T>(GUILayout.SelectionGrid(units.IndexGUI, GUIUnits.UnitNamesGUI<T>(), GUIUnits.UnitsCountGUI<T>(), ButtonToggle, wideWidth));
             GUILayout.EndHorizontal();
         }
 
