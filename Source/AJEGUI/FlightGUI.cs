@@ -58,7 +58,6 @@ namespace AJE.AJEGUI
 
         private void OnDestroy()
         {
-            Debug.Log("On Destroy");
             GameEvents.onShowUI.Remove(ShowUI);
             GameEvents.onHideUI.Remove(HideUI);
             SaveSettingsToConfig();
@@ -294,12 +293,12 @@ namespace AJE.AJEGUI
             }
         }
 
-        private static void HideUI()
+        private void HideUI()
         {
             ShowAllUIFlight = false;
         }
 
-        private static void ShowUI()
+        private void ShowUI()
         {
             ShowAllUIFlight = true;
         }
