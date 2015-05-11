@@ -22,8 +22,8 @@ namespace AJE.AJEGUI
 
         // GUI stuff
 
-        public static bool HideUIFlight = false;
-        public static bool MinimizeUIFlight = false;
+        public static bool ShowAllUIFlight = true;
+        public static bool ShowFlightGUIWindow = false;
 
         public static Rect FlightWindowPos;
 
@@ -44,18 +44,13 @@ namespace AJE.AJEGUI
 
             if (vessel.isActiveVessel)
             {
-                FlightGUISettings.LoadSettingsFromConfig();
+                LoadSettingsFromConfig();
             }
 
-            if (ToolbarManager.ToolbarAvailable && AJEFlightButtonBlizzy == null)
-            {
-                AJEFlightButtonBlizzy = ToolbarManager.Instance.add("AJE", "AJEFlightButton");
-                AJEFlightButtonBlizzy.TexturePath = "AJE/Icons/AJEIconBlizzy";
-                AJEFlightButtonBlizzy.ToolTip = "Advanced Jet Engine";
-                AJEFlightButtonBlizzy.OnClick += (e) => MinimizeUIFlight = !MinimizeUIFlight;
-            }
+            if (ToolbarManager.ToolbarAvailable)
+                CreateToolbarButtonBlizzy();
             else
-                GameEvents.onGUIApplicationLauncherReady.Add(OnGUIAppLauncherReady);
+                CreateToolbarButtonStock();
 
             GameEvents.onShowUI.Add(ShowUI);
             GameEvents.onHideUI.Add(HideUI);
@@ -63,13 +58,10 @@ namespace AJE.AJEGUI
 
         private void OnDestroy()
         {
+            Debug.Log("On Destroy");
             GameEvents.onShowUI.Remove(ShowUI);
             GameEvents.onHideUI.Remove(HideUI);
-            FlightGUISettings.SaveConfigs();
-
-            GameEvents.onGUIApplicationLauncherReady.Remove(OnGUIAppLauncherReady);
-            if (AJEFlightButtonStock != null)
-                ApplicationLauncher.Instance.RemoveModApplication(AJEFlightButtonStock);
+            SaveSettingsToConfig();
 
             if (AJEFlightButtonBlizzy != null)
                 AJEFlightButtonBlizzy.Destroy();
@@ -79,7 +71,7 @@ namespace AJE.AJEGUI
 
         public void OnGUI()
         {
-            if (!vessel.isActiveVessel || MinimizeUIFlight || HideUIFlight)
+            if (!vessel.isActiveVessel || !ShowFlightGUIWindow || !ShowAllUIFlight)
                 return;
 
             if (!GUIUtil.StylesInitialized)
@@ -197,10 +189,10 @@ namespace AJE.AJEGUI
             
             if (FlightGUISettings.ShowTDR && inAtmosphere)
             {
-                double totalDrag = FlightDataWrapper.VesselTotalDragN(vessel);
+                double totalDrag = FlightDataWrapper.VesselTotalDragkN(vessel);
                 double tdr = 0;
-                if (FlightDataWrapper.VesselDynPresPa(vessel) > 0.01d)
-                    tdr = totalThrust / totalDrag * 1000d;
+                if (FlightDataWrapper.VesselDynPreskPa(vessel) > 0.01d)
+                    tdr = totalThrust / totalDrag;
 
                 GUIUtil.FlightWindowField("Thrust / Drag", tdr.ToString("G3"));
                 windowDisplayField += counter;
@@ -212,7 +204,6 @@ namespace AJE.AJEGUI
                 double Isp = 0d;
                 if (totalThrust > 0d && totalMDot > 0d)
                     Isp = totalThrust / totalMDot; // kN/(kg/s) = km/s
-                Debug.Log("Isp = " + Isp.ToString("G3"));
 
                 GUIUtil.FlightWindowField("Specific Impulse", GUIUnitsSettings.IspUnits.Format(Isp, GUIUnits.Isp.km__s));
                 windowDisplayField += counter;
@@ -245,19 +236,49 @@ namespace AJE.AJEGUI
 
         #endregion
 
+        #region Configs
+
+        public void LoadSettingsFromConfig()
+        {
+            KSP.IO.PluginConfiguration config = KSP.IO.PluginConfiguration.CreateForType<FlightGUI>();
+            config.load();
+
+            FlightWindowPos = config.GetValue("flightWindowPos", new Rect());
+            //FlightGUI.ShowFlightGUIWindow = config.GetValue("showFlightWindow", false);
+
+            FlightGUISettings.LoadSettings(ref config);
+            GUIUnitsSettings.LoadSettings(ref config);
+        }
+
+        public void SaveSettingsToConfig()
+        {
+            KSP.IO.PluginConfiguration config = KSP.IO.PluginConfiguration.CreateForType<FlightGUI>();
+            //config.SetValue("showFlightWindow", FlightGUI.ShowFlightGUIWindow);
+
+            config.SetValue("flightWindowPos", FlightWindowPos);
+
+            FlightGUISettings.SaveSettings(ref config);
+            GUIUnitsSettings.SaveSettings(ref config);
+
+            config.save();
+        }
+
+        #endregion
+
         #region Toolbar Methods
 
-        private static void HideUI()
+        private static void CreateToolbarButtonBlizzy()
         {
-            HideUIFlight = true;
+            if (AJEFlightButtonBlizzy == null)
+            {
+                AJEFlightButtonBlizzy = ToolbarManager.Instance.add("AJE", "AJEFlightButton");
+                AJEFlightButtonBlizzy.TexturePath = "AJE/Icons/AJEIconBlizzy";
+                AJEFlightButtonBlizzy.ToolTip = "Advanced Jet Engine";
+                AJEFlightButtonBlizzy.OnClick += (e) => ShowFlightGUIWindow = !ShowFlightGUIWindow;
+            }
         }
 
-        private static void ShowUI()
-        {
-            HideUIFlight = false;
-        }
-
-        private static void OnGUIAppLauncherReady()
+        private static void CreateToolbarButtonStock()
         {
             if (ApplicationLauncher.Ready && AJEFlightButtonStock == null)
             {
@@ -268,21 +289,31 @@ namespace AJE.AJEGUI
                     DummyVoid,
                     DummyVoid,
                     DummyVoid,
-                    ApplicationLauncher.AppScenes.ALWAYS,
+                    ApplicationLauncher.AppScenes.FLIGHT,
                     (Texture)GameDatabase.Instance.GetTexture("AJE/Icons/AJEIconStock", false));
             }
+        }
+
+        private static void HideUI()
+        {
+            ShowAllUIFlight = false;
+        }
+
+        private static void ShowUI()
+        {
+            ShowAllUIFlight = true;
         }
 
         private static void DummyVoid() { }
 
         private static void onAppLaunchToggleOn()
         {
-            MinimizeUIFlight = false;
+            ShowFlightGUIWindow = true;
         }
 
         private static void onAppLaunchToggleOff()
         {
-            MinimizeUIFlight = true;
+            ShowFlightGUIWindow = false;
         }
 
         #endregion

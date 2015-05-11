@@ -10,7 +10,6 @@ namespace AJE.AJEGUI
     public static class GUIUnitsSettings
     {
         private static Rect UnitsSettingsWindowPos;
-        private static KSP.IO.PluginConfiguration config;
 
         public static GUIUnits.Units<GUIUnits.Temperature> TemperatureUnits = GUIUnits.Temperature.kelvin;
         public static GUIUnits.Units<GUIUnits.Pressure> PressureUnits = GUIUnits.Pressure.kPa;
@@ -51,13 +50,9 @@ namespace AJE.AJEGUI
 
         #region Configs
 
-        public static void LoadSettingsFromConfig()
+        public static void LoadSettings(ref KSP.IO.PluginConfiguration config)
         {
-            config = KSP.IO.PluginConfiguration.CreateForType<FlightGUI>();
-            config.load();
-
-            UnitsSettingsWindowPos = config.GetValue("settingsWindowPos", new Rect(400, 100, 200, 100));
-            FlightGUI.MinimizeUIFlight = config.GetValue("minimizeGUI", false);
+            UnitsSettingsWindowPos = config.GetValue("unitsSettingsWindowPos", new Rect());
 
             PressureUnits = GUIUnits.UnitsFromConfig<GUIUnits.Pressure>(ref config, GUIUnits.Pressure.kPa);
             TemperatureUnits = GUIUnits.UnitsFromConfig<GUIUnits.Temperature>(ref config, GUIUnits.Temperature.kelvin);
@@ -66,15 +61,15 @@ namespace AJE.AJEGUI
             TSFCUnits = GUIUnits.UnitsFromConfig<GUIUnits.TSFC>(ref config, GUIUnits.TSFC.kg__kgf_h);
         }
 
-        public static void SaveConfigs()
+        public static void SaveSettings(ref KSP.IO.PluginConfiguration config)
         {
+            config.SetValue("unitsSettingsWindowPos", UnitsSettingsWindowPos);
+
             PressureUnits.SaveToConfig(ref config);
             TemperatureUnits.SaveToConfig(ref config);
             ForceUnits.SaveToConfig(ref config);
             IspUnits.SaveToConfig(ref config);
             TSFCUnits.SaveToConfig(ref config);
-
-            config.save();
         }
 
         #endregion

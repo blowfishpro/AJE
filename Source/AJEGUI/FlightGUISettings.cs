@@ -15,8 +15,6 @@ namespace AJE.AJEGUI
 
         // Display settings
 
-        private static KSP.IO.PluginConfiguration config;
-
         public static bool ShowAmbientTemp = true;
         public static bool ShowAmbientPressure = true;
         public static bool ShowRecoveryTemp = true;
@@ -67,16 +65,8 @@ namespace AJE.AJEGUI
 
         #region Configs
 
-        public static void LoadSettingsFromConfig()
+        public static void LoadSettings(ref KSP.IO.PluginConfiguration config)
         {
-            config = KSP.IO.PluginConfiguration.CreateForType<AJEFlightSys>();
-            config.load();
-
-            FlightGUI.FlightWindowPos = config.GetValue("flightWindowPos", new Rect(100, 100, 250, 100));
-
-            SettingsWindowPos = config.GetValue("settingsWindowPos", new Rect(400, 100, 200, 100));
-            FlightGUI.MinimizeUIFlight = config.GetValue("minimizeGUI", false);
-
             ShowAmbientTemp = config.GetValue("showAmbientTemp", true);
             ShowAmbientPressure = config.GetValue("showAmbientPressure", true);
             ShowRecoveryTemp = config.GetValue("showRecoveryTemp", true);
@@ -88,11 +78,12 @@ namespace AJE.AJEGUI
             ShowTWR = config.GetValue("showTWR", true);
             ShowTDR = config.GetValue("showTDR", true);
             ShowIsp = config.GetValue("showIsp", true);
-            ShowTSFC = config.GetValue("showSFC", true);
+            ShowTSFC = config.GetValue("showTSFC", true);
         }
 
-        public static void SaveConfigs()
+        public static void SaveSettings(ref KSP.IO.PluginConfiguration config)
         {
+            config.SetValue("settingsWindowPos", SettingsWindowPos);
 
             config.SetValue("showAmbientTemp", ShowAmbientTemp);
             config.SetValue("showAmbientPressure", ShowAmbientPressure);
@@ -105,9 +96,7 @@ namespace AJE.AJEGUI
             config.SetValue("showTWR", ShowTWR);
             config.SetValue("showTDR", ShowTDR);
             config.SetValue("showIsp", ShowIsp);
-            config.SetValue("showSFC", ShowTSFC);
-
-            config.save();
+            config.SetValue("showTSFC", ShowTSFC);
         }
 
         #endregion

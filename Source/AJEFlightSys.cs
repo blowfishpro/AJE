@@ -32,8 +32,6 @@ namespace AJE
 
         public EngineThermodynamics InletTherm;
 
-        private bool inAtmosphere = true; // Keeps track of when in atmosphere and oxygen pesent.
-
         private void Start()
         {
             vessel = gameObject.GetComponent<Vessel>();

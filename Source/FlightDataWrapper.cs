@@ -37,7 +37,7 @@ namespace AJE
                     var types = assembly.assembly.GetExportedTypes();
                     for (int j = 0; j < types.Length; j++)
                     {
-                        Type t = types[0];
+                        Type t = types[j];
                         if (t.FullName.Equals("FerramAerospaceResearch.FARAPI"))
                         {
                             FARAPI = t;
@@ -77,12 +77,12 @@ namespace AJE
             }
         }
 
-        public static double VesselDynPresPa(Vessel vessel)
+        public static double VesselDynPreskPa(Vessel vessel)
         {
             if (haveFAR && FARVesselDynPres != null)
             {
                 var arg = new object[] { vessel };
-                return (double)FARVesselDynPres.Invoke(null, arg) * 1000d;
+                return (double)FARVesselDynPres.Invoke(null, arg);
             }
             else
             {
@@ -90,12 +90,17 @@ namespace AJE
             }
         }
 
-        public static double VesselTotalDragN(Vessel vessel)
+        public static double VesselTotalDragkN(Vessel vessel)
         {
             if (haveFAR && FARVesselDynPres != null && FARVesselRefArea != null && FARVesselLiftCoeff != null)
             {
                 var arg = new object[] { vessel };
-                return (double)FARVesselDynPres.Invoke(null, arg) * (double)FARVesselRefArea.Invoke(null, arg) * (double)FARVesselLiftCoeff.Invoke(null, arg);
+                return (double)FARVesselDynPres.Invoke(null, arg) * (double)FARVesselRefArea.Invoke(null, arg) * (double)FARVesselDragCoeff.Invoke(null, arg);
+            }
+            else if (haveFAR)
+            {
+                Debug.LogWarning("FAR was found but some of its methods are null.  How did this happen?");
+                return 0d;
             }
             else
             {
